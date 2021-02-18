@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: "Include network_capture"
+      include_role:
+        name: "network_capture"
