@@ -1,0 +1,31 @@
+---
+- name: Create some empty lists
+  set_fact:
+    capture_ifaces_possible: []
+    capture_ifaces_up: []
+    capture_ifaces_i40e: []
+
+- name: Start with the interfaces that we'll consider
+  set_fact:
+    capture_ifaces_possible: "{{ capture_ifaces_possible + [ item ] }}"
+  # A lot going on here. The interface can't have a v4 address, and if it has a v6 address, it must be link-local.
+  when: hostvars[inventory_hostname]['ansible_%s' | format(item)].ipv4 is not defined and (hostvars[inventory_hostname]['ansible_%s' | format(item)].ipv6 is not defined or ((hostvars[inventory_hostname]['ansible_%s' | format(item)].ipv6 | length == 1) and (hostvars[inventory_hostname]['ansible_%s' | format(item)].ipv6[0].scope == "link")))
+  loop: "{{ ansible_interfaces }}"
+
+- name: Find Intel NICs
+  set_fact:
+    capture_ifaces_i40e: "{{ capture_ifaces_i40e + [ item ] }}"
+  when: hostvars[inventory_hostname]['ansible_%s' | format(item)]['module']|default('') == "i40e"
+  loop: "{{ capture_ifaces_possible }}"
+
+# We need to know v3 or v5, which we can only tell from lspci
+- name: Check to see if we have SNFv3 NICs
+  command: "lspci -d 14c1:"
+  register: capture_have_snf3
+  become: true
+
+- name: Check to see if we have SNFv5 NICs
+  command: "lspci -d 1c09:"
+  register: capture_have_snf5
+  become: true
+
