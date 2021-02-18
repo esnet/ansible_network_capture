@@ -1,0 +1,72 @@
+---
+- name: Ensure that we only have either SNFv3 or SNFv5, but not both
+  assert:
+    that: (capture_have_snf3.stdout and not capture_have_snf5.stdout) or (not capture_have_snf3.stdout and capture_have_snf5.stdout)
+
+- name: Install SNFv3 driver
+  package:
+    name: "https://gitlab.es.net/security/security-packages/-/jobs/13224/artifacts/raw/myricom_packages/myri_snfv3-3.0.25.50927_0b38e91d6.rhel-3486.x86_64.rpm"
+    state: present
+  when: capture_have_snf3.stdout
+  become: true
+
+- name: Install SNFv5 driver
+  package:
+    name: "https://gitlab.es.net/security/security-packages/-/jobs/13224/artifacts/raw/myricom_packages/myri_snfv5-5.3.2.11.54430_eb5a8bd03.rhel.phx-6990.x86_64.rpm"
+    state: present
+  when: capture_have_snf5.stdout
+  become: true
+
+- name: Ensure that we have our start/stop script
+  copy:
+    src: /opt/snf/sbin/myri_start_stop.orig
+    dest: /opt/snf/sbin/myri_start_stop
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Copy systemd service file
+  copy:
+    src: /opt/snf/sbin/myri_start_stop.service
+    dest: /etc/systemd/system/myri_start_stop.service
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Copy udev rules
+  copy:
+    src: /opt/snf/sbin/myri_snf.udev.rules
+    dest: /etc/udev/rules.d/
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+- name: Add SNF lib dir to ld.so.conf
+  copy:
+    dest: /etc/ld.so.conf.d/myri_snf.conf
+    content: "/opt/snf/lib"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: ldconfig
+
+- name: Ensure we have our kernel module
+  command:
+    cmd: /opt/snf/sbin/rebuild.sh
+    creates: /opt/snf/sbin/myri_snf.ko
+  become: true
+
+- name: Enable our service
+  systemd:
+    name: myri_start_stop.service
+    enabled: yes
+    daemon_reload: yes
+    state: started
+  become: true

@@ -61,4 +61,5 @@
     name: "intel_config_{{ intel_ifname }}.service"
     enabled: yes
     daemon_reload: yes
+    started: yes
   become: true

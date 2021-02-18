@@ -1,0 +1,299 @@
+[Unit]
+Description=configuring the Intel NIC at {{ intel_ifname }} for network capture
+BindsTo=sys-subsystem-net-devices-{{ intel_ifname }}.device
+
+[Install]
+WantedBy=multi-user.target
+RequiredBy=sys-subsystem-net-devices-{{ intel_ifname }}.device
+
+[Service]
+Type=oneshot
+
+### Set Private Flags
+
+# Disable multiple functions per port (MFP)
+# See: https://www.kernel.org/doc/Documentation/networking/i40e.rst
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} mfp off
+
+# Disable Link Polling
+# See: https://patchwork.ozlabs.org/project/netdev/patch/1444354374-24351-9-git-send-email-jeffrey.t.kirsher@intel.com/
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} LinkPolling off
+
+# Disable Flow Director Application Targeted Routing (ATR) Perfect Filters
+# See: https://www.kernel.org/doc/Documentation/networking/i40e.rst
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} flow-director-atr off
+
+# Disable Virtual Ethernet Bridge (VEB) stats
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} veb-stats off
+
+# Disable Hardware ATR eviction
+# HW ATR eviction is a method to remove the Application Targeted
+# Routing (ATR) rules once a connection closes. We don't need it.
+# See: https://patchwork.ozlabs.org/project/netdev/patch/20170612223837.38940-1-jeffrey.t.kirsher@intel.com/
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} hw-atr-eviction off
+
+# Disable forcing the link down when the interface is closed
+# See: https://sourceforge.net/projects/e1000/files/i40e%20stable/2.0.26/
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} link-down-on-close off
+
+# Disable the legacy RX code path
+# See: https://www.spinics.net/lists/netdev/msg413026.html
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} legacy-rx off
+
+# Disable source pruning
+# See: https://patchwork.ozlabs.org/project/netdev/patch/20171006175727.868-3-jeffrey.t.kirsher@intel.com/
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} disable-source-pruning off
+
+# Disable FW-LLDP (Firmware Link Layer Discovery Protocol)
+# See: https://downloadmirror.intel.com/24411/eng/readme.txt
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} disable-fw-lldp off
+
+# Disable Reed Solomon Forward Error Correction (RS-FEC)
+# See: https://downloadmirror.intel.com/24411/eng/readme.txt
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} rs-fec off
+
+# Disable BASE-R (Firecode) Foreward Error Correction (FEC)
+# See: https://downloadmirror.intel.com/24411/eng/readme.txt
+ExecStart=-/usr/sbin/ethtool --set-priv-flags {{ intel_ifname }} base-r-fec off
+
+### Configure channels
+
+# Each channel is an IRQ. Disable all RX channels.
+ExecStart=-/usr/sbin/ethtool --set-channels {{ intel_ifname }} rx 0
+
+# Disable all TX channels.
+ExecStart=-/usr/sbin/ethtool --set-channels {{ intel_ifname }} tx 0
+
+# Set 1 "other" channel, for link up/down and other misc events.
+ExecStart=-/usr/sbin/ethtool --set-channels {{ intel_ifname }} other 1
+
+# Set combined channels (TX & RX) to the number of queues
+ExecStart=-/usr/sbin/ethtool --set-channels {{ intel_ifname }} combined {{ intel_queues }}
+
+### Configure features
+
+# Misc. offload features. We disable these for higher performance & fidelity and lower latency.
+
+# Disable esp_hw_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} esp-hw-offload off
+
+# Disable esp_tx_csum_hw_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} esp-tx-csum-hw-offload off
+
+# Disable generic_receive_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} gro off
+
+# Disable generic_segmentation_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} gso off
+
+# Disable hw_tc_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} hw-tc-offload off
+
+# Disable l2_fwd_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} l2-fwd-offload off
+
+# Disable large_receive_offload
+# In the case of fragmentation, this will buffer it on the NIC and try to coalesce fragments
+# back into one "super-packet." We don't want it for many reasons.
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} lro off
+
+# Disable rx_gro_hw
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} rx-gro-hw off
+
+# Disable rx_udp_tunnel_port_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} rx-udp_tunnel-port-offload off
+
+# Disable rx_vlan_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} rxvlan off
+
+# Disable tcp_segmentation_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tso off
+
+# Disable tx_gso_partial
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-gso-partial off
+
+# Disable tx_gso_robust
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-gso-robust off
+
+# Disable TLS record offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tls-hw-record off
+
+# Disable tls_hw_rx_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tls-hw-rx-offload off
+
+# Disable tls_hw_tx_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tls-hw-tx-offload off
+
+# Disable tx_vlan_offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} txvlan off
+
+# Checksumming options. Related to offload, the NIC will inspect and drop packets with invalid
+# checksums, or replace the checksum with the correct value. Disable for performance and fidelity.
+
+# Disable rx_checksumming
+ExecStart=-/usr/sbin/ethtool --offload {{ intel_ifname }} rx off
+
+# Disable tx_checksum_ipv4
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-checksum-ipv4 off
+
+# Disable tx_checksum_ipv6
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-checksum-ipv6 off
+
+# Disable tx_checksum_sctp
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-checksum-sctp off
+
+# Disable tx_checksumming
+ExecStart=-/usr/sbin/ethtool --offload {{ intel_ifname }} tx off
+
+# Disable tx_checksum_fcoe_crc
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-checksum-fcoe-crc off
+
+# Disable tx_checksum_ip_generic
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-checksum-ip-generic off
+
+# Segmentation. Breaking packets into MTU-sized chunks.
+
+# Disable tx_esp_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-esp-segmentation off
+
+# Disable tx_fcoe_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-fcoe-segmentation off
+
+# Disable tx_gre_csum_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-gre-csum-segmentation off
+
+# Disable tx_gre_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-gre-segmentation off
+
+# Disable tx_ipxip4_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-ipxip4-segmentation off
+
+# Disable tx_ipxip6_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-ipxip6-segmentation off
+
+# Disable tx_sctp_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-sctp-segmentation off
+
+# Disable tx_tcp6_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-tcp6-segmentation off
+
+# Disable tx_tcp_ecn_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-tcp-ecn-segmentation off
+
+# Disable tx_tcp_mangleid_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-tcp-mangleid-segmentation off
+
+# Disable tx_tcp_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-tcp-segmentation off
+
+# Disable tx_udp_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-udp-segmentation off
+
+# Disable tx_udp_tnl_csum_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-udp_tnl-csum-segmentation off
+
+# Disable tx_udp_tnl_segmentation
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-udp_tnl-segmentation off
+
+# VLAN handling. Outer S-TAG (service tag) & inner C-TAG (customer tag).
+
+# Don't filter on the inner VLAN (C-TAG)
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} rx-vlan-filter off
+
+# Don't filter on the outer VLAN (S-TAG)
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} rx-vlan-stag-filter off
+
+# Disable receive outer VLAN (S-TAG) HW acceleration
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} rx-vlan-stag-hw-parse off
+
+# Disable transmit outer VLAN (S-TAG) HW acceleration
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-vlan-stag-hw-insert off
+
+# Disable vlan_challenged (the NIC doesn't support VLANs)
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} vlan-challenged off
+
+# Disable scatter-gather.
+# Rather than one large buffer, scatter-gather uses
+# many smaller buffers, which then need to be recombined.
+
+# Disable scatter_gather
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} sg off
+
+# Disable tx_scatter_gather
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-scatter-gather off
+
+# Disable tx_scatter_gather_fraglist
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-scatter-gather-fraglist off
+
+# How to handle Ethernet frames with invalid checksums (we drop them)
+
+# Do not accept all Ethernet frames regardless of checksum
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} rx-all off
+
+# Do not append the FCS checksum to the end of the packet data
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} rx-fcs off
+
+# Miscellaneous craziness
+
+# Disable Fiber Channel over Ethernet MTU (fcoe_mtu)
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} fcoe-mtu off
+
+# Disable loopback mode
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} !loopback off
+
+# Enable highdma (disabling this == for a Broadcom bug)
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} !highdma on
+
+# Do not force local network namespace
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} netns-local off
+
+# Disable LockLess TX (deprecated anyway)
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-lockless off
+
+# Disable performance-impacting copy with nocache
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} tx-nocache-copy off
+
+# Enable n-tuple filters
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} ntuple on
+
+# Enable receive hashing offload
+ExecStart=-/usr/sbin/ethtool --features {{ intel_ifname }} rxhash on
+
+### Set IRQ affinity
+ExecStart=-/usr/local/sbin/set_irq_affinity {{ capture_nic_affinity }} {{ intel_ifname }}
+
+### Configure receive flow hash key
+ExecStart=-/usr/sbin/ethtool --set-rxfh-indir {{ intel_ifname }} hkey {{ _intel_hkey }} equal {{ intel_queues }}
+
+### Disable flow control
+
+# Disable all flow control
+ExecStart=-/usr/sbin/ethtool --pause {{ intel_ifname }} autoneg off rx off tx off
+
+### Disable interrupt coaelesence
+
+# We probably want to revisit this. If we use a counter (say 100)
+# the interrupt would fire after 100 packets. This is probably fine
+# on a busy link, and would save significant CPU time, but would add
+# latency.
+
+# Disable all adaptive coalescence
+ExecStart=-/usr/sbin/ethtool --coalesce {{ intel_ifname }} adaptive-rx off adaptive-tx off
+
+### Set the ring parameters
+
+# Set RX ring size
+ExecStart=-/usr/sbin/ethtool --set-ring {{ intel_ifname }} rx {{ intel_rx_ring_size|string }}
+
+### Configure n-tuple hashing
+
+ExecStart=-/usr/sbin/ethtool --config-ntuple {{ intel_ifname }} rx-flow-hash tcp4 {{ intel_hash_opts }}
+ExecStart=-/usr/sbin/ethtool --config-ntuple {{ intel_ifname }} rx-flow-hash tcp6 {{ intel_hash_opts }}
+ExecStart=-/usr/sbin/ethtool --config-ntuple {{ intel_ifname }} rx-flow-hash udp4 {{ intel_hash_opts }}
+ExecStart=-/usr/sbin/ethtool --config-ntuple {{ intel_ifname }} rx-flow-hash udp6 {{ intel_hash_opts }}
+ExecStart=-/usr/sbin/ethtool --config-ntuple {{ intel_ifname }} rx-flow-hash ah4 {{ intel_hash_opts }}
+ExecStart=-/usr/sbin/ethtool --config-ntuple {{ intel_ifname }} rx-flow-hash ah6 {{ intel_hash_opts }}
+ExecStart=-/usr/sbin/ethtool --config-ntuple {{ intel_ifname }} rx-flow-hash esp4 {{ intel_hash_opts }}
+ExecStart=-/usr/sbin/ethtool --config-ntuple {{ intel_ifname }} rx-flow-hash esp6 {{ intel_hash_opts }}
+ExecStart=-/usr/sbin/ethtool --config-ntuple {{ intel_ifname }} rx-flow-hash sctp4 {{ intel_hash_opts }}
+ExecStart=-/usr/sbin/ethtool --config-ntuple {{ intel_ifname }} rx-flow-hash sctp6 {{ intel_hash_opts }}

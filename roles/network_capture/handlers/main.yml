@@ -1,2 +1,4 @@
 ---
-# handlers file for network_capture
+- name: ldconfig
+  command: "/usr/sbin/ldconfig"
+  become: true

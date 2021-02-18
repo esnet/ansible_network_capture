@@ -6,3 +6,6 @@
   include: config_intel.yml intel_ifname={{ item }}
   loop: "{{ capture_ifaces_i40e }}"
 
+- name: Configure any Myricom NICs
+  include: config_myricom.yml
+  when: capture_have_snf3.stdout or capture_have_snf5.stdout
