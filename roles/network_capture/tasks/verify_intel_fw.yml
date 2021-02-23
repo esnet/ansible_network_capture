@@ -1,0 +1,27 @@
+---
+- name: Get Intel XXV710 interface names
+  shell: "basename /sys/bus/pci/drivers/i40e/{{ item }}/net/*"
+  register: xxv710_iface
+
+- name: Get Intel XXV710 firmware info
+  command: "ethtool -i {{ xxv710_iface.stdout }}"
+  register: xxv710_firmware
+
+- name: Check that the firmware is correct
+  fail:
+    msg: "Intel NIC firmware version is incorrect. iface {{ xxv710_iface.stdout }}: {{ line }}"
+  failed_when: >-
+    line != "firmware-version: " + xxv710_firmware_version
+  loop: "{{ xxv710_firmware.stdout_lines | select('match', 'firmware-version:') | list}}"
+  loop_control:
+    loop_var: line
+
+- name: Check that the driver is correct
+  fail:
+    msg: "Intel NIC driver version is incorrect. iface {{ xxv710_iface.stdout }}: {{ line }}"
+  failed_when: >-
+    line != "version: " + xxv710_driver_version
+  loop: "{{ xxv710_firmware.stdout_lines | select('match', 'version:') | list}}"
+  loop_control:
+    loop_var: line
+

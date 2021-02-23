@@ -1,2 +1,31 @@
 ---
-# tasks file for network_capture
+- name: Create fact directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  loop:
+    - /etc/ansible
+    - /etc/ansible/facts.d
+  become: true
+
+- name: Create NIC fact
+  template:
+    src: nics.fact.j2
+    dest: /etc/ansible/facts.d/nics.fact
+    mode: "0775"
+    owner: root
+    group: root
+  become: true
+
+- fail:
+
+- name: Find Intel XXV710 NIC PCI IDs
+  shell: "lspci -Dd 8086:158b | cut -f 1 -d' '"
+  register: xxv710_pci_ids
+
+- name: Verify driver and firmware
+  include_tasks: verify_intel_fw.yml
+  loop: "{{ xxv710_pci_ids.stdout_lines }}"
