@@ -21,6 +21,9 @@
   become: true
   register: nic_fact
 
+- debug:
+    var: ansible_version
+
 - name: Gather NIC facts when our fact updates
   setup:
     gather_subset: local
