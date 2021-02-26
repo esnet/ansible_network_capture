@@ -26,12 +26,6 @@
     gather_subset: local
   when: nic_fact.changed
 
-- fail:
-
-- name: Find Intel XXV710 NIC PCI IDs
-  shell: "lspci -Dd 8086:158b | cut -f 1 -d' '"
-  register: xxv710_pci_ids
-
-- name: Verify driver and firmware
-  include_tasks: verify_intel_fw.yml
-  loop: "{{ xxv710_pci_ids.stdout_lines }}"
+- name: Print out NIC configuration
+  debug:
+    var: ansible_local.nics
