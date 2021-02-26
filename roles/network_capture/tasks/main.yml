@@ -26,6 +26,10 @@
     gather_subset: local
   when: nic_fact.changed
 
+- name: Determine which interface is up
+  set_fact:
+    capture_ifaces: "{{ ansible_local.nics | selectattr('carrier', 'defined') | selectattr('carrier', 'true') | selectattr('port', 'defined') | selectattr('port', 'equalto', 'FIBRE') | list }}"
+
 - name: Print out NIC configuration
   debug:
-    var: ansible_local.nics
+    var: capture_ifaces
