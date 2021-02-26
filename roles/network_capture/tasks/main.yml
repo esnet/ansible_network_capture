@@ -19,6 +19,12 @@
     owner: root
     group: root
   become: true
+  register: nic_fact
+
+- name: Gather NIC facts when our fact updates
+  setup:
+    gather_subset: local
+  when: nic_fact.changed
 
 - fail:
 

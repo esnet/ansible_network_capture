@@ -18,16 +18,19 @@ def get_pci_ids_by_vendor(vendor_id):
     return [x for x in out.decode('utf-8').strip().split('\n') if x]
 
 def get_iface_by_pci_id(device_id):
-    return os.listdir(f"/sys/bus/pci/devices/{device_id}/net")[0]
+    try:
+        return os.listdir(f"/sys/bus/pci/devices/{device_id}/net")[0]
+    except (FileNotFoundError, IndexError):
+        return []
 
 def get_facts_by_pci_id(device_id, iface):
     data = {}
-    with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/address") as f:
-        data['mac'] = f.read().strip()
     try:
+        with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/address") as f:
+            data['mac'] = f.read().strip()
         with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/carrier") as f:
             data['carrier'] = f.read().strip() == '1'
-    except OSError:
+    except (OSError, FileNotFoundError):
         pass
     return data
 
@@ -35,6 +38,16 @@ def get_snf_nic_info():
     nic_info = subprocess.Popen(['/opt/snf/bin/myri_nic_info', '--machine'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = nic_info.communicate()
     return [x.split(',') for x in out.decode('utf-8').strip().split('\n') if x]
+
+def get_snf_driver_info():
+    if not os.path.exists("/opt/snf/src/common/myri_version.h"):
+        return ""
+    with open("/opt/snf/src/common/myri_version.h") as f:
+        lines = f.readlines()
+        for line in lines:
+            if 'MYRI_BUILD_STR' in line:
+                return line.split('"')[1]
+
 
 def get_ethtool_driver_info(interface):
     ethtool = subprocess.Popen(['ethtool', '--driver', interface], stdout=subprocess.PIPE)
@@ -64,9 +77,13 @@ capture_nics = []
 
 snf_info = {}
 if os.path.exists("/opt/snf/bin/myri_nic_info"):
-    for port, serial, mac, product, driver, version, license in get_snf_nic_info():
-        snf_info[mac] = {"port": port, "serial": serial, "product": product,
-                           "driver": driver, "version": version, "license": license}
+    try:
+        for port, serial, mac, product, driver, version, license in get_snf_nic_info():
+            snf_info[mac] = {"port": port, "serial": serial, "product": product,
+                            "driver": driver, "version": version, "license": license}
+    except ValueError:
+        # Could not find any Myricom NICs, or possibly a driver version mismatch
+        pass
 
 for vendor_id, vendor_data in vendor_ids.items():
     device_ids = get_pci_ids_by_vendor(vendor_id)
@@ -84,13 +101,15 @@ for vendor_id, vendor_data in vendor_ids.items():
         if vendor_data['manufacturer'] == "Intel":
             data.update(get_ethtool_driver_info(iface_name))
             data.update(get_ethtool_port_info(iface_name))
-
-        elif data['mac'] in snf_info:
-            data['snf_port'] = snf_info[data['mac']]['port']
-            data['serial'] = snf_info[data['mac']]['serial']
-            data['product'] = snf_info[data['mac']]['product']
-            data['license_status'] = snf_info[data['mac']]['license']
-            data['version'] = snf_info[data['mac']]['version']
+        else:
+            # Myricom
+            data['snf_driver_version'] = get_snf_driver_info()
+            if 'mac' in data and data['mac'] in snf_info:
+                data['snf_port'] = snf_info[data['mac']]['port']
+                data['serial'] = snf_info[data['mac']]['serial']
+                data['product'] = snf_info[data['mac']]['product']
+                data['license_status'] = snf_info[data['mac']]['license']
+                data['version'] = snf_info[data['mac']]['version']
 
         capture_nics.append(data)
 
