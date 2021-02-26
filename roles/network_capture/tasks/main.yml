@@ -21,8 +21,12 @@
   become: true
   register: nic_fact
 
+- command: "pip freeze"
+  delegate_to: localhost
+  register: pip_env
+
 - debug:
-    var: ansible_version
+    var: pip_env
 
 - name: Gather NIC facts when our fact updates
   setup:
