@@ -19,16 +19,14 @@
     owner: root
     group: root
   become: true
-  register: nic_fact
+  notify: Gather local facts
 
 - name: Gather NIC facts when our fact updates
-  setup:
-    gather_subset: local
-  when: nic_fact.changed
+  meta: flush_handlers
 
 - name: Determine which interfaces are up
   set_fact:
-    capture_ifaces: "{{ ansible_local.nics | selectattr('carrier', 'defined') | selectattr('carrier', 'true') | selectattr('port', 'defined') | selectattr('port', 'equalto', 'FIBRE') | list }}"
+    capture_ifaces: "{{ ansible_local.nics | selectattr('carrier', 'defined') | selectattr('carrier', 'true') | list }}"
 
 - name: "Ensure that we have a single interface connected (TODO: Add support for multiple interfaces)"
   assert:

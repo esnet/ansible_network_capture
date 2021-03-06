@@ -3,6 +3,7 @@
 import json
 import os
 import subprocess
+import sys
 
 vendor_ids = {
     '8086:158b': {'manufacturer': "Intel", 'model': "XXV710", 'sniffer_driver': "i40e"},
@@ -10,8 +11,16 @@ vendor_ids = {
     '1c09:4264': {'manufacturer': "Myricom", 'model': "10G-PCIE3", 'sniffer_driver': 'snfv5'},
     }
 
+if os.path.exists("/usr/sbin/lspci"):
+    lspci_exe = "/usr/sbin/lspci"
+elif os.path.exists("/usr/bin/lspci"):
+    lspci_exe = "/usr/bin/lspci"
+else:
+    print({"error": "lspci not found"})
+    sys.exit(1)
+
 def get_pci_ids_by_vendor(vendor_id):
-    lspci = subprocess.Popen(['lspci', '-Dd', vendor_id], stdout=subprocess.PIPE)
+    lspci = subprocess.Popen([lspci_exe, '-Dd', vendor_id], stdout=subprocess.PIPE)
     pci_ids = subprocess.Popen(['cut', '-f', '1', '-d', " "], stdin=lspci.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     lspci.stdout.close()
     out, err = pci_ids.communicate()
@@ -25,13 +34,16 @@ def get_iface_by_pci_id(device_id):
 
 def get_facts_by_pci_id(device_id, iface):
     data = {}
+    with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/mtu") as f:
+        data['mtu'] = int(f.read().strip())
     try:
         with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/address") as f:
             data['mac'] = f.read().strip()
         with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/carrier") as f:
             data['carrier'] = f.read().strip() == '1'
     except (OSError, FileNotFoundError):
-        pass
+        # We have an MTU, but no carrier or address. Assume this is SNFv5 being hella-weird
+        data['carrier'] = True
     return data
 
 def get_snf_nic_info():
@@ -79,7 +91,7 @@ snf_info = {}
 if os.path.exists("/opt/snf/bin/myri_nic_info"):
     try:
         for port, serial, mac, product, driver, version, license in get_snf_nic_info():
-            snf_info[mac] = {"port": port, "serial": serial, "product": product,
+            snf_info[mac] = {"port": int(port), "serial": int(serial), "product": product,
                             "driver": driver, "version": version, "license": license}
     except ValueError:
         # Could not find any Myricom NICs, or possibly a driver version mismatch

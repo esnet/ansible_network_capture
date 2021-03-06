@@ -1,2 +1,4 @@
 ---
-# handlers file for network_capture
+- name: Gather local facts
+  setup:
+    gather_subset: local
