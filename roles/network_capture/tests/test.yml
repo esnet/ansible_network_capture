@@ -2,4 +2,8 @@
 - hosts: localhost
   remote_user: root
   roles:
+<<<<<<< HEAD:roles/network_capture/tests/test.yml
     - network_capture
+=======
+    - prometheus_client
+>>>>>>> master:roles/prometheus_client/tests/test.yml
