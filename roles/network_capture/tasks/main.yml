@@ -37,10 +37,6 @@
     capture_iface: "{{ capture_ifaces[0] }}"
   when: capture_ifaces | length
 
-- debug:
-    var: capture_iface
-  when: capture_ifaces | length
-
 - name: Configure any Intel NICs
   include: config_intel.yml
   when: (capture_ifaces | length) and capture_iface.manufacturer == "Intel"
@@ -48,7 +44,6 @@
 - name: Configure any Myricom NICs
   include: config_myricom.yml
   when: (capture_ifaces | length) and capture_iface.manufacturer == "Myricom"
-
 
 - name: Enable our service
   systemd:
