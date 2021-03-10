@@ -51,14 +51,15 @@
 - name: Create device configuration unit
   template:
     src: "intel_systemd.j2"
-    dest: "/etc/systemd/system/intel_config_{{ intel_ifname }}.service"
+    dest: "/etc/systemd/system/tuning_{{ intel_ifname }}.service"
+    mode: '0644'
     owner: root
     group: root
   become: true
 
 - name: Enable our service
   systemd:
-    name: "intel_config_{{ intel_ifname }}.service"
+    name: "tuning_{{ intel_ifname }}.service"
     enabled: yes
     daemon_reload: yes
     started: yes

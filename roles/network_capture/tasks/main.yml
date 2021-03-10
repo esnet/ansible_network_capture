@@ -1,7 +1,4 @@
 ---
-- name: Discover which NICs we have
-  include: discover.yml
-
 - name: Configure any Intel NICs
   include: config_intel.yml intel_ifname={{ item }}
   loop: "{{ capture_ifaces_i40e }}"
