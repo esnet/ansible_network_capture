@@ -6,4 +6,3 @@
 - name: Gather local facts
   setup:
     gather_subset: local
-
