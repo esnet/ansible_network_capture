@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+
+import glob
+import json
+import os
+import subprocess
+import sys
+
+vendor_ids = {
+    "8086:158b": {"manufacturer": "Intel", "model": "XXV710", "sniffer_driver": "i40e"},
+    "14c1:0008": {
+        "manufacturer": "Myricom",
+        "model": "10G-PCIE",
+        "sniffer_driver": "snfv3",
+    },
+    "1c09:4264": {
+        "manufacturer": "Myricom",
+        "model": "10G-PCIE3",
+        "sniffer_driver": "snfv5",
+    },
+}
+
+if os.path.exists("/usr/sbin/lspci"):
+    lspci_exe = "/usr/sbin/lspci"
+elif os.path.exists("/usr/bin/lspci"):
+    lspci_exe = "/usr/bin/lspci"
+else:
+    print({"error": "lspci not found"})
+    sys.exit(1)
+
+
+def get_pci_ids_by_vendor(vendor_id):
+    lspci = subprocess.Popen([lspci_exe, "-Dd", vendor_id], stdout=subprocess.PIPE)
+    pci_ids = subprocess.Popen(
+        ["cut", "-f", "1", "-d", " "],
+        stdin=lspci.stdout,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    lspci.stdout.close()
+    out, err = pci_ids.communicate()
+    return [x for x in out.decode("utf-8").strip().split("\n") if x]
+
+
+def get_iface_by_pci_id(device_id):
+    try:
+        return os.listdir(f"/sys/bus/pci/devices/{device_id}/net")[0]
+    except (FileNotFoundError, IndexError):
+        return []
+
+
+def get_facts_by_pci_id(device_id, iface):
+    data = {}
+    with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/mtu") as f:
+        data["mtu"] = int(f.read().strip())
+    with open(f"/sys/bus/pci/devices/{device_id}/numa_node") as f:
+        data["numa_node"] = int(f.read().strip())
+    numa_dir = f"/sys/devices/system/node/node{data['numa_node']}"
+    cpulist = glob.glob(f"{numa_dir}/cpu[0-9]*")
+
+    data["cpulist"] = []
+    for c in cpulist:
+        c = c.replace(f"{numa_dir}/cpu", "")
+        with open(
+            f"/sys/devices/system/node/node{data['numa_node']}/cpu{c}/topology/thread_siblings_list"
+        ) as f:
+            thread_siblings = f.read().strip().split(",")
+        if c == thread_siblings[0]:
+            data["cpulist"].append(c)
+    data["cpulist"].sort(key=int)
+    data["cpus"] = ",".join(data["cpulist"])
+    try:
+        with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/address") as f:
+            data["mac"] = f.read().strip()
+        with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/carrier") as f:
+            data["carrier"] = f.read().strip() == "1"
+    except (OSError, FileNotFoundError):
+        # We have an MTU, but no carrier or address. Assume this is SNFv5 being hella-weird
+        data["carrier"] = True
+    return data
+
+
+def get_snf_nic_info():
+    nic_info = subprocess.Popen(
+        ["/opt/snf/bin/myri_nic_info", "--machine"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    out, err = nic_info.communicate()
+    return [x.split(",") for x in out.decode("utf-8").strip().split("\n") if x]
+
+
+def get_snf_driver_info():
+    if not os.path.exists("/opt/snf/src/common/myri_version.h"):
+        return ""
+    with open("/opt/snf/src/common/myri_version.h") as f:
+        lines = f.readlines()
+        for line in lines:
+            if "MYRI_BUILD_STR" in line:
+                return line.split('"')[1]
+
+
+def get_ethtool_driver_info(interface):
+    ethtool = subprocess.Popen(
+        ["ethtool", "--driver", interface], stdout=subprocess.PIPE
+    )
+    out, err = ethtool.communicate()
+    result = {}
+    for line in out.decode("utf-8").strip().split("\n"):
+        k, v = line.split(":", 1)
+        result[k] = v.strip()
+    return result
+
+
+def get_ethtool_port_info(interface):
+    ethtool = subprocess.Popen(
+        ["ethtool", interface], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    out, err = ethtool.communicate()
+
+    simple_vals = ["Duplex", "Speed", "Port", "PHYAD", "Auto-negotiation"]
+
+    result = {}
+    for line in out.decode("utf-8").strip().split("\n"):
+        line = line.strip()
+        for val in simple_vals:
+            if line.startswith(f"{val}: "):
+                result[val.lower()] = line.split(": ", 1)[1]
+
+    return result
+
+
+capture_nics = []
+
+snf_info = {}
+if os.path.exists("/opt/snf/bin/myri_nic_info"):
+    try:
+        for port, serial, mac, product, driver, version, license in get_snf_nic_info():
+            snf_info[mac] = {
+                "port": int(port),
+                "serial": int(serial),
+                "product": product,
+                "driver": driver,
+                "version": version,
+                "license": license,
+            }
+    except ValueError:
+        # Could not find any Myricom NICs, or possibly a driver version mismatch
+        pass
+
+for vendor_id, vendor_data in vendor_ids.items():
+    device_ids = get_pci_ids_by_vendor(vendor_id)
+    for device_id in device_ids:
+        data = {}
+        data.update(vendor_data)
+        data["pci_id"] = device_id
+
+        iface_name = get_iface_by_pci_id(device_id)
+        data["iface"] = iface_name
+
+        facts = get_facts_by_pci_id(device_id, iface_name)
+        data.update(facts)
+
+        if vendor_data["manufacturer"] == "Intel":
+            data.update(get_ethtool_driver_info(iface_name))
+            data.update(get_ethtool_port_info(iface_name))
+        else:
+            # Myricom
+            data["snf_driver_version"] = get_snf_driver_info()
+            if "mac" in data and data["mac"] in snf_info:
+                data["snf_port"] = snf_info[data["mac"]]["port"]
+                data["serial"] = snf_info[data["mac"]]["serial"]
+                data["product"] = snf_info[data["mac"]]["product"]
+                data["license_status"] = snf_info[data["mac"]]["license"]
+                data["version"] = snf_info[data["mac"]]["version"]
+
+        capture_nics.append(data)
+
+print(json.dumps(capture_nics))

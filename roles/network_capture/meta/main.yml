@@ -1,20 +1,21 @@
 galaxy_info:
-  role_name: network_capture
-  author: esnet
-  description: Detects and configures any network cards used for monitoring
-  company: ESnet
+    role_name: network_capture
+    author: esnet
+    description: Configures cards for network capture (NSM, IDS, packet capture, etc.)
+    company: ESnet
 
-  license: BSD-3-Clause
+    license: BSD-3-Clause
 
-  min_ansible_version: 1.2
+    min_ansible_version: 1.2
 
-  platforms:
-      - name: CentOS
-        versions:
-            - 7
-            - 8
-      - name: Ubuntu
-        versions:
-            - 20
+    platforms:
+        - name: CentOS
+          versions:
+              - 7
+              - 8
+        - name: Ubuntu
+          versions:
+              - 18
+              - 20
 
 dependencies: []

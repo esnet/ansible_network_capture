@@ -1,32 +1,4 @@
 ---
-- name: Ensure we have facts for our interface
-  assert:
-    that: "ansible_{{ intel_ifname }} is defined"
-    fail_msg: "Could not find facts for interface {{ intel_ifname }}"
-
-- name: Get NUMA node
-  slurp:
-    src: "/sys/class/net/{{ intel_ifname }}/device/numa_node"
-  register: numa_node64
-
-- name: Set NUMA node fact
-  set_fact:
-    numa_node: "{{ numa_node64['content'] | b64decode | trim }}"
-
-- name: Get CPU list
-  slurp:
-    src: "/sys/devices/system/node/node{{ numa_node }}/cpulist"
-  register: cpu_list64
-
-- name: Set some facts that we'll need
-  set_fact:
-    capture_nic_affinity: "{{ cpu_list64['content'] | b64decode | trim }}"
-    intel_queues: "{{ ansible_processor_cores }}"
-    intel_hash_key_pattern: ["6D", "5A"]
-    intel_hash_key_length: 52
-    intel_rx_ring_size: 4096
-    intel_hash_opts: sd
-
 - name: Set the hash key to the right multiple
   set_fact:
     _intel_hkey_mult: "{{ intel_hash_key_length/(intel_hash_key_pattern | length) }}"
@@ -51,16 +23,9 @@
 - name: Create device configuration unit
   template:
     src: "intel_systemd.j2"
-    dest: "/etc/systemd/system/tuning_{{ intel_ifname }}.service"
+    dest: "/etc/systemd/system/tuning_{{ capture_iface.iface }}.service"
     mode: '0644'
     owner: root
     group: root
   become: true
 
-- name: Enable our service
-  systemd:
-    name: "tuning_{{ intel_ifname }}.service"
-    enabled: yes
-    daemon_reload: yes
-    started: yes
-  become: true

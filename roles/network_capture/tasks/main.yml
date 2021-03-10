@@ -1,8 +1,60 @@
 ---
+- name: Create fact directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  loop:
+    - /etc/ansible
+    - /etc/ansible/facts.d
+  become: true
+
+- name: Create NIC fact
+  template:
+    src: nics.fact.j2
+    dest: /etc/ansible/facts.d/nics.fact
+    mode: "0775"
+    owner: root
+    group: root
+  become: true
+  notify: Gather local facts
+
+- name: Gather NIC facts when our fact updates
+  meta: flush_handlers
+
+- name: Determine which interfaces are up
+  set_fact:
+    capture_ifaces: "{{ ansible_local.nics | selectattr('carrier', 'defined') | selectattr('carrier', 'true') | list }}"
+
+- name: "Ensure that we have a single interface connected (TODO: Add support for multiple interfaces)"
+  assert:
+    that: "capture_ifaces | length <= 1"
+
+- name: Define our interface
+  set_fact:
+    capture_iface: "{{ capture_ifaces[0] }}"
+  when: capture_ifaces | length
+
+- debug:
+    var: capture_iface
+  when: capture_ifaces | length
+
 - name: Configure any Intel NICs
-  include: config_intel.yml intel_ifname={{ item }}
-  loop: "{{ capture_ifaces_i40e }}"
+  include: config_intel.yml
+  when: (capture_ifaces | length) and capture_iface.manufacturer == "Intel"
 
 - name: Configure any Myricom NICs
   include: config_myricom.yml
-  when: capture_have_snf3.stdout or capture_have_snf5.stdout
+  when: (capture_ifaces | length) and capture_iface.manufacturer == "Myricom"
+
+
+- name: Enable our service
+  systemd:
+    name: "tuning_{{ capture_iface.iface }}.service"
+    enabled: yes
+    daemon_reload: yes
+    state: started
+  when: capture_ifaces | length
+  become: true

@@ -2,3 +2,8 @@
 - name: ldconfig
   command: "/usr/sbin/ldconfig"
   become: true
+
+- name: Gather local facts
+  setup:
+    gather_subset: local
+
