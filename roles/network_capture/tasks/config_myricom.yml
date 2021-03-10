@@ -5,19 +5,65 @@
     state: absent
   become: true
 
-- name: Install SNFv3 driver
-  package:
-    name: "https://gitlab.es.net/security/security-packages/-/jobs/13224/artifacts/raw/myricom_packages/myri_snfv3-3.0.25.50927_0b38e91d6.rhel-3486.x86_64.rpm"
-    state: present
-  when: capture_iface.sniffer_driver == "snfv3"
+- name: Create base directory
+  file:
+    path: /opt/snf
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
   become: true
 
-- name: Install SNFv5 driver
-  package:
-    name: "https://gitlab.es.net/security/security-packages/-/jobs/13224/artifacts/raw/myricom_packages/myri_snfv5-5.3.2.11.54430_eb5a8bd03.rhel.phx-6990.x86_64.rpm"
-    state: present
-  when: capture_iface.sniffer_driver == "snfv5"
+- name: Install SNFv3 driver
+  unarchive:
+    src: "{{ snfv3_url }}"
+    dest: /opt/snf
+    remote_src: yes
+    extra_opts:
+    - --strip-components=1
+  when: ansible_local.nics[0].sniffer_driver == "snfv3" and ansible_local.nics[0].snf_driver_version is defined and ansible_local.nics[0].snf_driver_version != snfv3_version
   become: true
+  notify: Build SNF
+
+- name: Install SNFv3 driver
+  unarchive:
+    src: "{{ snfv5_url }}"
+    dest: /opt/snf
+    remote_src: yes
+    extra_opts:
+    - "--strip-components=1"
+  when: ansible_local.nics[0].sniffer_driver == "snfv5" and ansible_local.nics[0].snf_driver_version is defined and ansible_local.nics[0].snf_driver_version != snfv5_version
+  become: true
+  notify: Build SNF
+
+- name: Copy udev rules
+  copy:
+    src: /opt/snf/sbin/myri_snf.udev.rules
+    dest: /etc/udev/rules.d/
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_local.nics[0].sniffer_driver == "snfv5"
+  become: true
+
+- name: Add SNF lib dir to ld.so.conf
+  copy:
+    dest: /etc/ld.so.conf.d/myri_snf.conf
+    content: "/opt/snf/lib"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: ldconfig
+
+- name: Force handlers to run, to regather NIC facts
+  meta: flush_handlers
+
+- name: Check if SNF detected a connected port
+  assert:
+    that: capture_iface is defined
+    fail_msg: Driver successfully installed, but could not find a port
 
 - name: Ensure that we have our start/stop script
   copy:
@@ -39,28 +85,3 @@
     mode: '0755'
   become: true
 
-- name: Copy udev rules
-  copy:
-    src: /opt/snf/sbin/myri_snf.udev.rules
-    dest: /etc/udev/rules.d/
-    remote_src: true
-    owner: root
-    group: root
-    mode: '0644'
-  become: true
-
-- name: Add SNF lib dir to ld.so.conf
-  copy:
-    dest: /etc/ld.so.conf.d/myri_snf.conf
-    content: "/opt/snf/lib"
-    owner: root
-    group: root
-    mode: '0644'
-  become: true
-  notify: ldconfig
-
-- name: Ensure we have our kernel module
-  command:
-    cmd: /opt/snf/sbin/rebuild.sh
-    creates: /opt/snf/sbin/myri_snf.ko
-  become: true

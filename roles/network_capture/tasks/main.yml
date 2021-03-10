@@ -21,21 +21,11 @@
   become: true
   notify: Gather local facts
 
-- name: Gather NIC facts when our fact updates
+- name: Force handlers to run, to regather NIC facts
   meta: flush_handlers
 
-- name: Determine which interfaces are up
-  set_fact:
-    capture_ifaces: "{{ ansible_local.nics | selectattr('carrier', 'defined') | selectattr('carrier', 'true') | list }}"
-
-- name: "Ensure that we have a single interface connected (TODO: Add support for multiple interfaces)"
-  assert:
-    that: "capture_ifaces | length <= 1"
-
-- name: Define our interface
-  set_fact:
-    capture_iface: "{{ capture_ifaces[0] }}"
-  when: capture_ifaces | length
+- name: Detect our interfaces
+  include: find_live_ifaces.yml
 
 - name: Configure any Intel NICs
   include: config_intel.yml
@@ -43,7 +33,8 @@
 
 - name: Configure any Myricom NICs
   include: config_myricom.yml
-  when: (capture_ifaces | length) and capture_iface.manufacturer == "Myricom"
+  # The logic here is weird, because we can't detect which ports are up/down before we install the SNF driver
+  when: (ansible_local.nics | length) and ansible_local.nics[0].manufacturer == "Myricom"
 
 - name: Enable our service
   systemd:

@@ -51,6 +51,9 @@ def get_iface_by_pci_id(device_id):
 
 def get_facts_by_pci_id(device_id, iface):
     data = {}
+    if not len(iface):
+        return data
+
     with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/mtu") as f:
         data["mtu"] = int(f.read().strip())
     with open(f"/sys/bus/pci/devices/{device_id}/numa_node") as f:
