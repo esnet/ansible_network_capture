@@ -3,14 +3,6 @@ dependency:
   name: galaxy
 driver:
   name: docker
-<<<<<<< HEAD:roles/network_capture/molecule/default/molecule.yml
-=======
-lint: |
-  set -ex
-  yamllint .
-  ansible-lint . ../../playbooks/ssh_auditor.yml
-  flake8
->>>>>>> master:roles/ssh_auditor/molecule/default/molecule.yml
 platforms:
   - name: instance
     image: docker.io/pycontribs/centos:7
