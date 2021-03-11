@@ -6,7 +6,7 @@
 - name: Fall back to those with a speed
   set_fact:
     capture_ifaces: "{{ ansible_local.nics | selectattr('speed', 'defined') | selectattr('speed', '==', '10000Mb/s') | list }}"
-  when: capture_ifaces is not defined
+  when: (capture_ifaces | length) == 0
 
 - name: Check for multiple interfaces
   block:
