@@ -50,7 +50,7 @@
 - name: Add SNF lib dir to ld.so.conf
   copy:
     dest: /etc/ld.so.conf.d/myri_snf.conf
-    content: "/opt/snf/lib"
+    content: "/opt/snf/lib\n"
     owner: root
     group: root
     mode: '0644'
