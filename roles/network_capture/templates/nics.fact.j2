@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import glob
 import json
 import os
 import subprocess
@@ -50,8 +51,27 @@ def get_iface_by_pci_id(device_id):
 
 def get_facts_by_pci_id(device_id, iface):
     data = {}
+    if not len(iface):
+        return data
+
     with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/mtu") as f:
         data["mtu"] = int(f.read().strip())
+    with open(f"/sys/bus/pci/devices/{device_id}/numa_node") as f:
+        data["numa_node"] = int(f.read().strip())
+    numa_dir = f"/sys/devices/system/node/node{data['numa_node']}"
+    cpulist = glob.glob(f"{numa_dir}/cpu[0-9]*")
+
+    data["cpulist"] = []
+    for c in cpulist:
+        c = c.replace(f"{numa_dir}/cpu", "")
+        with open(
+            f"/sys/devices/system/node/node{data['numa_node']}/cpu{c}/topology/thread_siblings_list"
+        ) as f:
+            thread_siblings = f.read().strip().split(",")
+        if c == thread_siblings[0]:
+            data["cpulist"].append(c)
+    data["cpulist"].sort(key=int)
+    data["cpus"] = ",".join(data["cpulist"])
     try:
         with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/address") as f:
             data["mac"] = f.read().strip()

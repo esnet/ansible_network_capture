@@ -1,0 +1,19 @@
+---
+- name: Determine which interfaces are up
+  set_fact:
+    capture_ifaces: "{{ ansible_local.nics | selectattr('carrier', 'defined') | selectattr('carrier', 'true') | list }}"
+
+- name: Check for multiple interfaces
+  block:
+    - name: "Ensure that we have a single interface connected (TODO: Add support for multiple interfaces)"
+      assert:
+        that: "capture_ifaces | length <= 1"
+  rescue:
+    - name: "Warn the user that we're just guessing"
+      debug:
+        msg: "Multiple interfaces connected and up. Choosing the first one? ¯\_(ツ)_/¯"
+
+- name: Define our interface
+  set_fact:
+    capture_iface: "{{ capture_ifaces[0] }}"
+  when: capture_ifaces | length

@@ -1,3 +1,14 @@
 ---
+intel_hash_key_length: 52
+intel_hash_key_pattern: ["6D", "5A"]
+intel_hash_opts: sd
+intel_rx_ring_size: 4096
+
 xxv710_firmware_version: "8.20 0x80009bd4 1.2879.0"
 xxv710_driver_version: "2.8.20-k"
+
+snfv3_version: "snf-5.3.2.11.54430_eb5a8bd03 01/07/21_14:20 eb5a8bd03"
+snfv3_url: "https://gitlab.es.net/security/security-packages/-/jobs/19477/artifacts/raw/myricom_packages/myri_snf-3.0.25.50927_0b38e91d6-3486.x86_64.tgz"
+
+snfv5_version: "snf-5.3.2.11.54430_eb5a8bd03 01/07/21_14:20 eb5a8bd03"
+snfv5_url: "https://gitlab.es.net/security/security-packages/-/jobs/19477/artifacts/raw/myricom_packages/myri_snf-5.3.2.11.54430_eb5a8bd03.phx-6990.x86_64.tgz"

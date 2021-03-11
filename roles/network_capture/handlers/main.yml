@@ -1,4 +1,14 @@
 ---
+- name: ldconfig
+  command: "/usr/sbin/ldconfig"
+  become: true
+
 - name: Gather local facts
   setup:
     gather_subset: local
+
+- name: Reconfigure interfaces
+  include: tasks/find_live_ifaces.yml
+
+- name: Build SNF
+  include: tasks/build_snf_driver.yml
