@@ -48,6 +48,22 @@ def get_iface_by_pci_id(device_id):
     except (FileNotFoundError, IndexError):
         return []
 
+def get_physical_cpus(cpu_dir_list):
+    cpulist = []
+    for cpu_dir in cpu_dir_list:
+        cpu_id = cpu_dir.replace(f"{numa_dir}/cpu", "")
+        with open(
+            f"{cpu_dir}/topology/thread_siblings_list"
+        ) as f:
+            thread_siblings = f.read().strip().split(",")
+        # Only add CPUs that are listed first
+        if cpu_id == thread_siblings[0]:
+            cpulist.append(cpu_id)
+    cpulist.sort(key=int)
+    # Create a comma-separated one for irq-affinity and other uses
+    cpus = ",".join(cpulist)
+
+    return (cpulist, cpus)
 
 def get_facts_by_pci_id(device_id, iface):
     data = {}
@@ -61,17 +77,16 @@ def get_facts_by_pci_id(device_id, iface):
     numa_dir = f"/sys/devices/system/node/node{data['numa_node']}"
     cpulist = glob.glob(f"{numa_dir}/cpu[0-9]*")
 
-    data["cpulist"] = []
-    for c in cpulist:
-        c = c.replace(f"{numa_dir}/cpu", "")
-        with open(
-            f"/sys/devices/system/node/node{data['numa_node']}/cpu{c}/topology/thread_siblings_list"
-        ) as f:
-            thread_siblings = f.read().strip().split(",")
-        if c == thread_siblings[0]:
-            data["cpulist"].append(c)
-    data["cpulist"].sort(key=int)
-    data["cpus"] = ",".join(data["cpulist"])
+    data["cpulist"], data["cpus"] = get_physical_cpus(cpulist)
+
+    # Now we build the list of other NUMA nodes
+    non_local_numa_dirs = [n for n in glob.glob(f"/sys/devices/system/node/node[0-9]*") if n != numa_dir]
+    non_local_cpulist = []
+    for n in non_local_numa_dirs:
+        non_local_cpulist += glob.glob(f"{n}/cpu[0-9]*")
+
+    data["non_local_cpulist"], data["non_local_cpus"] = get_physical_cpus(non_local_cpulist)
+
     try:
         with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/address") as f:
             data["mac"] = f.read().strip()
