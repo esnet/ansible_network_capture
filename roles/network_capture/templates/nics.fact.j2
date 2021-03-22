@@ -51,7 +51,7 @@ def get_iface_by_pci_id(device_id):
 def get_physical_cpus(cpu_dir_list):
     cpulist = []
     for cpu_dir in cpu_dir_list:
-        cpu_id = cpu_dir.replace(f"{numa_dir}/cpu", "")
+        cpu_id = os.path.basename(cpu_dir).replace("cpu", "")
         with open(
             f"{cpu_dir}/topology/thread_siblings_list"
         ) as f:
