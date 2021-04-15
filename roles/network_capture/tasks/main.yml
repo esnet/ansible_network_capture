@@ -42,5 +42,5 @@
     enabled: yes
     daemon_reload: yes
     state: started
-  when: capture_ifaces | length
+  when: capture_ifaces | length and capture_iface.manufacturer in ["Intel", "Myricom"]
   become: true
