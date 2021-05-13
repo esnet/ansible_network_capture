@@ -5,7 +5,6 @@ driver:
   name: docker
 lint: |
   ../../scripts/molecule_lint.sh playbooks/zeek.yml
-  flake8
 platforms:
   - name: instance
     image: docker.io/pycontribs/centos:7
