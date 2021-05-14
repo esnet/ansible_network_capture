@@ -11,4 +11,4 @@
   include: tasks/find_live_ifaces.yml
 
 - name: Build SNF
-  include: tasks/build_snf_driver.yml
+  include: handlers/build_snf_driver.yml
