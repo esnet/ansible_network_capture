@@ -1,0 +1,2 @@
+- name: esnet_security.common
+  src: git+https://gitlab.es.net/security/ansible/common
