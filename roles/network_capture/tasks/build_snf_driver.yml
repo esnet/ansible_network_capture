@@ -1,0 +1,11 @@
+---
+- name: Build the driver
+  command: "/opt/snf/sbin/rebuild.sh"
+  become: true
+
+- name: Load the driver
+  command: "/opt/snf/sbin/myri_start_stop start"
+  become: true
+
+- name: Reconfigure interfaces
+  include: tasks/find_live_ifaces.yml

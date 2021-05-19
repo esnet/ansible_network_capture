@@ -3,6 +3,11 @@
   set_fact:
     capture_ifaces: "{{ ansible_local.nics | selectattr('carrier', 'defined') | selectattr('carrier', 'true') | list }}"
 
+- name: Fall back to those with a speed
+  set_fact:
+    capture_ifaces: "{{ ansible_local.nics | selectattr('speed', 'defined') | selectattr('speed', '==', '10000Mb/s') | list }}"
+  when: (capture_ifaces | length) == 0
+
 - name: Check for multiple interfaces
   block:
     - name: "Ensure that we have a single interface connected (TODO: Add support for multiple interfaces)"
