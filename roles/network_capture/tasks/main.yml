@@ -1,4 +1,13 @@
 ---
+- name: Install dependencies
+  package:
+    name:
+      - python3
+      - pciutils
+    state: present
+  become: true
+
+
 - name: Create fact directory
   file:
     path: "{{ item }}"
