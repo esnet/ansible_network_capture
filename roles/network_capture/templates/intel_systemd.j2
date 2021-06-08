@@ -9,6 +9,9 @@ RequiredBy=sys-subsystem-net-devices-{{ capture_iface.iface }}.device
 [Service]
 Type=oneshot
 
+### Set MTU
+ExecStart=-/sbin/ifconfig {{ capture_iface.iface }} mtu 9214
+
 ### Set Private Flags
 
 # Disable multiple functions per port (MFP)
