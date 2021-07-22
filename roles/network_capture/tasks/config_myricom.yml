@@ -25,7 +25,7 @@
   become: true
   notify: Build SNF
 
-- name: Install SNFv3 driver
+- name: Install SNFv5 driver
   unarchive:
     src: "{{ snfv5_url }}"
     dest: /opt/snf
