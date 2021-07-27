@@ -8,7 +8,6 @@
   file:
     path: /tmp/myri_snf.log
     state: file
-  check_mode: true
   register: logfile_created
 
 - name: Check if major kernel version matches last SNF module build
