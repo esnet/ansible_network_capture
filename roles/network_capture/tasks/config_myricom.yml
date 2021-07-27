@@ -27,7 +27,7 @@
     - --strip-components=1
   when: ansible_local.nics[0].sniffer_driver == "snfv3" and snf_driver_mismatch
   become: true
-  notify: Build SNF
+  register: snf3_install
 
 - name: Install SNFv5 driver
   unarchive:
@@ -38,7 +38,11 @@
     - "--strip-components=1"
   when: ansible_local.nics[0].sniffer_driver == "snfv5" and snf_driver_mismatch
   become: true
-  notify: Build SNF
+  register: snf5_install
+
+- name: Build SNF driver
+  include: build_snf_driver.yml
+  when: snf3_install.changed or snf5_install.changed
 
 - name: Copy udev rules
   copy:
