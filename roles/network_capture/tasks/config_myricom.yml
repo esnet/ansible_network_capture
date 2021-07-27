@@ -42,7 +42,7 @@
 
 - name: Build SNF driver
   include: build_snf_driver.yml
-  when: snf3_install.changed or snf5_install.changed
+  when: snf3_install.changed or snf5_install.changed or capture_iface is not defined
 
 - name: Copy udev rules
   copy:
