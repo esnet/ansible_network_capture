@@ -33,7 +33,7 @@
 - name: Load the driver
   command: "/opt/snf/sbin/myri_start_stop start"
   become: true
-  when: module_missing
+  when: module_missing or capture_iface is not defined
 
 - name: Reconfigure interfaces
   include: tasks/find_live_ifaces.yml
