@@ -14,6 +14,10 @@
     mode: "0755"
   become: true
 
+- name: Check to see if our installed SNF driver matches our desired
+  set_fact:
+    snf_driver_mismatch: ansible_local.nics[0].snf_driver_version is not defined or (ansible_local.nics[0].snf_driver_version != snfv3_version and ansible_local.nics[0].snf_driver_version != snfv5_version)
+
 - name: Install SNFv3 driver
   unarchive:
     src: "{{ snfv3_url }}"
@@ -21,20 +25,24 @@
     remote_src: yes
     extra_opts:
     - --strip-components=1
-  when: ansible_local.nics[0].sniffer_driver == "snfv3" and ansible_local.nics[0].snf_driver_version is defined and ansible_local.nics[0].snf_driver_version != snfv3_version
+  when: ansible_local.nics[0].sniffer_driver == "snfv3" and snf_driver_mismatch
   become: true
-  notify: Build SNF
+  register: snf3_install
 
-- name: Install SNFv3 driver
+- name: Install SNFv5 driver
   unarchive:
     src: "{{ snfv5_url }}"
     dest: /opt/snf
     remote_src: yes
     extra_opts:
     - "--strip-components=1"
-  when: ansible_local.nics[0].sniffer_driver == "snfv5" and ansible_local.nics[0].snf_driver_version is defined and ansible_local.nics[0].snf_driver_version != snfv5_version
+  when: ansible_local.nics[0].sniffer_driver == "snfv5" and snf_driver_mismatch
   become: true
-  notify: Build SNF
+  register: snf5_install
+
+- name: Build SNF driver
+  include: build_snf_driver.yml
+  when: snf3_install.changed or snf5_install.changed or capture_iface is not defined
 
 - name: Copy udev rules
   copy:

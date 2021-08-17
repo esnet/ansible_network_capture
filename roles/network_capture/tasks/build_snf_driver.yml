@@ -4,10 +4,19 @@
     kmajor: "{{ ansible_kernel.split('-')[0] | regex_replace('\\.', '') }}"
     kstep: "{{ ansible_kernel.split('-')[1].split('.')[1] }}"
 
+- name: Create myri_snf.log
+  file:
+    path: /tmp/myri_snf.log
+    mode: '0660'
+    state: touch
+  check_mode: true
+  register: logfile_created
+
 - name: Check if major kernel version matches last SNF module build
   lineinfile:
     line: "EXTRA_CFLAGS += -DMYRI_LINUX_MAJOR={{ kmajor }}"
     state: absent
+    path: /tmp/myri_snf.log
   check_mode: true
   register: kmajor_mismatch
 
@@ -15,13 +24,14 @@
   lineinfile:
     line: "EXTRA_CFLAGS += -DMYRI_LINUX_STEPPING={{ kstep }}"
     state: absent
+    path: /tmp/myri_snf.log
   check_mode: true
   register: kstep_mismatch
 
 - name: Build the driver
   command: "/opt/snf/sbin/rebuild.sh"
   become: true
-  when: kmajor_mismatch or kstep_mismatch
+  when: logfile_created or major_mismatch or kstep_mismatch
 
 - name: Check if the module is loaded
   modprobe:
@@ -33,7 +43,7 @@
 - name: Load the driver
   command: "/opt/snf/sbin/myri_start_stop start"
   become: true
-  when: module_missing
+  when: module_missing or capture_iface is not defined
 
 - name: Reconfigure interfaces
   include: tasks/find_live_ifaces.yml
