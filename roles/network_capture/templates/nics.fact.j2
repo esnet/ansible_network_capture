@@ -98,8 +98,8 @@ def get_facts_by_pci_id(device_id, iface):
         with open(f"/sys/bus/pci/devices/{device_id}/net/{iface}/carrier") as f:
             data["carrier"] = f.read().strip() == "1"
     except (OSError, FileNotFoundError):
-        # We have an MTU, but no carrier or address. Assume this is SNFv5 being hella-weird
-        data["carrier"] = True
+        # We have an MTU, but if we have no carrier and no address, we assume this is SNFv5 being hella-weird
+        data["carrier"] = "mac" not in data and "carrier" not in data
     return data
 
 
