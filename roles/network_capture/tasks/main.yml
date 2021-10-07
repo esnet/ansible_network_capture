@@ -16,6 +16,13 @@
       group: root
     become: true
 
+  - name: Get list of repo files
+    find:
+      paths: /etc/yum.repos.d/
+      patterns: "CentOS-Linux*.repo"
+      recurse: no
+    register: find_repos
+
   - name: Copy unused repo files to a backup directory
     copy:
       src: "{{ item }}"
@@ -24,16 +31,14 @@
       owner: "root"
       mode: 0600
     become: true
-    with_fileglob:
-    - "/etc/yum.repos.d/CentOS-Linux*"
+    with_items: "{{ find_repos.files }}"
 
   - name: Remove unused repos
     file:
       path: "{{ item }}"
       state: absent
     become: true
-    with_fileglob:
-    - "/etc/yum.repos.d/CentOS-Linux*"
+    with_items: "{{ find_repos.files }}"
 
   - name: Clean yum's cache
     command: yum clean all
