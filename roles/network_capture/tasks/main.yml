@@ -4,7 +4,9 @@
 # This should move to Inf since it's a change to the base OS, but we currently
 # believe it's an auto-update that keeps overwriting the repos.  
 ####
-- block:
+- name: Fix mnzeek repos
+  block:
+
   - name: Create directory for unused repos
     file:
       path: "/etc/yum.repos.d/ansible"
