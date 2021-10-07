@@ -25,17 +25,17 @@
 
   - name: Copy unused repo files to a backup directory
     copy:
-      src: "{{ item }}"
+      src: "{{ item.path }}"
       dest: "/etc/yum.repos.d/ansible/"
       remote_src: yes
       owner: "root"
-      mode: 0600
+      mode: 0644
     become: true
     with_items: "{{ find_repos.files }}"
 
   - name: Remove unused repos
     file:
-      path: "{{ item }}"
+      path: "{{ item.path }}"
       state: absent
     become: true
     with_items: "{{ find_repos.files }}"
