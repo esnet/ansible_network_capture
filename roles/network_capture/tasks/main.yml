@@ -1,4 +1,55 @@
 ---
+#####
+# BEGIN: mnzeek repos fix
+# This should move to Inf since it's a change to the base OS, but we currently
+# believe it's an auto-update that keeps overwriting the repos.  
+####
+- name: Fix mnzeek repos
+  block:
+
+  - name: Create directory for unused repos
+    file:
+      path: "/etc/yum.repos.d/ansible"
+      state: directory
+      mode: "0755"
+      owner: root
+      group: root
+    become: true
+
+  - name: Get list of repo files
+    find:
+      paths: /etc/yum.repos.d/
+      patterns: "CentOS-Linux*.repo"
+      recurse: no
+    register: find_repos
+
+  - name: Copy unused repo files to a backup directory
+    copy:
+      src: "{{ item.path }}"
+      dest: "/etc/yum.repos.d/ansible/"
+      remote_src: yes
+      owner: "root"
+      mode: 0644
+    become: true
+    with_items: "{{ find_repos.files }}"
+
+  - name: Remove unused repos
+    file:
+      path: "{{ item.path }}"
+      state: absent
+    become: true
+    with_items: "{{ find_repos.files }}"
+
+  - name: Clean yum's cache
+    command: yum clean all
+    become: true
+
+  when: ansible_distribution == 'CentOS' and inventory_hostname in groups['zeek_mgmt_net']  
+
+####
+# END: mnzeek repos fix
+####
+
 - name: Install dependencies
   package:
     name:
@@ -6,7 +57,6 @@
       - pciutils
     state: present
   become: true
-
 
 - name: Create fact directory
   file:
