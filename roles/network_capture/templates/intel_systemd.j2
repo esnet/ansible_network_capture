@@ -300,3 +300,7 @@ ExecStart=-/usr/sbin/ethtool --config-ntuple {{ capture_iface.iface }} rx-flow-h
 ExecStart=-/usr/sbin/ethtool --config-ntuple {{ capture_iface.iface }} rx-flow-hash esp6 {{ intel_hash_opts }}
 ExecStart=-/usr/sbin/ethtool --config-ntuple {{ capture_iface.iface }} rx-flow-hash sctp4 {{ intel_hash_opts }}
 ExecStart=-/usr/sbin/ethtool --config-ntuple {{ capture_iface.iface }} rx-flow-hash sctp6 {{ intel_hash_opts }}
+
+### Make sure interface is up
+ExecStart=-/usr/sbin/ip link set {{ capture_iface.iface }} up
+
