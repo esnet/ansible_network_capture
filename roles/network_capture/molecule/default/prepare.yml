@@ -3,3 +3,9 @@
   hosts: all
   roles:
     - esnet_security.common
+  tasks:
+    - name: Install dependencies
+      package:
+        name:
+          - pciutils
+        state: present

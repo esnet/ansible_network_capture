@@ -7,9 +7,26 @@ lint: |
   ../../scripts/molecule_lint.sh playbooks/zeek.yml
 platforms:
   - name: instance
-    image: docker.io/pycontribs/centos:7
+    image: docker.io/pycontribs/centos:8
     pre_build_image: true
+    groups:
+      - zeek_mgmt_net
 provisioner:
   name: ansible
 verifier:
   name: ansible
+scenario:
+  test_sequence:
+    - dependency
+    - lint
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+#    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy
