@@ -16,7 +16,10 @@
 
 - name: Check to see if our installed SNF driver matches our desired
   set_fact:
-    snf_driver_mismatch: ansible_local.nics[0].snf_driver_version is not defined or (ansible_local.nics[0].snf_driver_version != snfv3_version and ansible_local.nics[0].snf_driver_version != snfv5_version)
+    snf_driver_mismatch: >-
+      ansible_local.nics[0].snf_driver_version is not defined
+      or (ansible_local.nics[0].snf_driver_version != snfv3_version
+      and ansible_local.nics[0].snf_driver_version != snfv5_version)
 
 - name: Install SNFv3 driver
   unarchive:

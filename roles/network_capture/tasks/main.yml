@@ -44,7 +44,7 @@
     command: yum clean all
     become: true
 
-  when: ansible_distribution == 'CentOS' and inventory_hostname in groups['zeek_mgmt_net']  
+  when: ansible_distribution == 'CentOS' and inventory_hostname in groups['zeek_mgmt_net']
 
 ####
 # END: mnzeek repos fix
