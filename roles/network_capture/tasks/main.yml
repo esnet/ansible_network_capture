@@ -40,7 +40,7 @@
     become: true
     with_items: "{{ find_repos.files }}"
 
-  - name: Clean yum's cache
+  - name: Clean yum's cache # noqa command-instead-of-module
     command: yum clean all
     become: true
 
